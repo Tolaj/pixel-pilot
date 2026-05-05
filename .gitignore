@@ -1,0 +1,6 @@
+/.venv
+/__pycache__
+/models
+/test.py
+/test_omniparser.py
+/test_screenshot.png

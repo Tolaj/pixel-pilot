@@ -1,0 +1,25 @@
+# =========================
+# Python
+# =========================
+*__pycache__
+__pycache__*
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+
+models
+models/
