@@ -1,4 +1,9 @@
 # main.py
+import os
+
+os.environ["HF_HOME"] = os.path.abspath("./models")
+
+# everything else below
 import sys
 from loop import run
 

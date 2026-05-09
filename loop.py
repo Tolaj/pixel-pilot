@@ -1,8 +1,10 @@
 # loop.py
 import time
-from perception import parse_screen
+from perception import parse_screen, set_provider
 from agent import start_server, stop_server, get_next_action
 from executor import execute_action
+
+set_provider("moondream")  # "ax" or "moondream" / "omniparser"
 
 MAX_STEPS = 20
 SCREENSHOT_DELAY = 1.5  # seconds to wait after action before next screenshot
