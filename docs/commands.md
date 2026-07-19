@@ -3,17 +3,21 @@
 ## Setup
 
 ```bash
+# Clone and enter project
+git clone <repo-url>
+cd pixel-pilot
+
 # Create virtual environment
 python -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install -e .
+pip install -r requirements.txt
 
 # Install dev dependencies (pytest)
-pip install -e ".[dev]"
+pip install pytest
 
-# Download model weights
+# Download model weights (~4GB)
 python scripts/download_models.py
 ```
 

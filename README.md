@@ -8,7 +8,7 @@ Uses Qwen3-VL-2B-Instruct cross-attention maps to locate UI elements from natura
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e .
+pip install -r requirements.txt
 python scripts/download_models.py
 python cli.py --target "the Submit button" --dry-run
 ```
@@ -26,6 +26,7 @@ perception/           # screen parsing providers (ax, moondream, omniparser)
 benchmarks/           # tuning & evaluation scripts
 tests/                # pytest unit & integration tests
 scripts/              # tooling (model download)
+refinement/           # refinement CNN training pipeline
 cli.py                # main entry point
 models/               # model weights (.gitignored)
 ```

@@ -20,9 +20,6 @@ dev = [
     "pytest>=8.0",
 ]
 
-[project.scripts]
-pixel-pilot = "cli:main"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
