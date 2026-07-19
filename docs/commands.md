@@ -62,6 +62,23 @@ pytest tests/test_synthetic_grounding.py -v -s -m slow
 pytest tests/ -v
 ```
 
+## Refinement Net
+
+```bash
+# Step 1: Download ScreenSpot dataset (1,272 samples)
+python -m refinement.download_data
+
+# Step 2: Generate attention heatmaps for all samples (~5-6 hours on M3)
+# Use caffeinate to prevent sleep during overnight runs
+caffeinate -i python -m refinement.generate_heatmaps
+
+# Step 3: Train refinement net
+python -m refinement.train
+
+# Step 4: Compare baseline vs refined
+python -m refinement.evaluate
+```
+
 ## Legacy Agent Loop
 
 ```bash

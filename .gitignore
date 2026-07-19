@@ -15,6 +15,10 @@ debug/
 # Benchmark results
 benchmarks/results/
 
+# Refinement data and checkpoints
+refinement/data/
+refinement/checkpoints/
+
 # IDE / editor
 .claude/
 .idea/
