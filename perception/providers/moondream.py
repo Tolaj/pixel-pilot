@@ -1,12 +1,4 @@
-# perception/providers/moondream.py
-"""
-Moondream2 provider — 1.8B VLM, fast screenshot understanding.
-Uses point-query mode: for each detected region (from a lightweight YOLO pass),
-asks Moondream "what is this UI element?" to get a label.
-
-If you want zero YOLO dependency, set MOONDREAM_GRID_MODE = True below,
-which slices the screen into a grid and captions each cell instead.
-"""
+"""Moondream2 provider -- 1.8B VLM, fast screenshot understanding."""
 
 import os
 import torch
@@ -15,13 +7,11 @@ from .base_provider import LazyProvider
 from ..registry import register
 
 MOONDREAM_DIR = "./models/moondream2"
-MOONDREAM_GRID_MODE = False  # True = grid slicing, False = YOLO-guided crops
+MOONDREAM_GRID_MODE = False
 
-# grid mode settings (used only when MOONDREAM_GRID_MODE = True)
 GRID_COLS = 4
 GRID_ROWS = 4
 
-# YOLO-guided settings (used when MOONDREAM_GRID_MODE = False)
 OMNI_DIR = "./models/omniparser"
 ICON_DETECT = os.path.join(OMNI_DIR, "icon_detect/model.pt")
 MIN_CONF = 0.5
@@ -34,7 +24,7 @@ DTYPE = torch.float16
 class MoondreamProvider(LazyProvider):
     name = "moondream"
     description = (
-        "Moondream2 1.8B VLM — faster than Qwen3-VL, no server needed (~500ms/frame)"
+        "Moondream2 1.8B VLM -- faster than Qwen3-VL, no server needed (~500ms/frame)"
     )
 
     def _load(self):
@@ -68,7 +58,6 @@ class MoondreamProvider(LazyProvider):
         return self._model.answer_question(enc, question, self._tokenizer).strip()
 
     def _parse_grid(self, image: Image.Image) -> list[dict]:
-        """Slice screen into GRID_COLS × GRID_ROWS cells and caption each."""
         w, h = image.size
         cw, ch = w // GRID_COLS, h // GRID_ROWS
         elements = []
@@ -98,7 +87,6 @@ class MoondreamProvider(LazyProvider):
         return elements
 
     def _parse_yolo_guided(self, image: Image.Image) -> list[dict]:
-        """YOLO detects regions, Moondream captions each crop."""
         image_rgb = image.convert("RGB")
         boxes = self._yolo(image_rgb, verbose=False)[0].boxes
         elements = []

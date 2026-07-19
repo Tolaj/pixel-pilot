@@ -1,6 +1,28 @@
-/.venv
-/__pycache__
-/models
-/test.py
-/test_omniparser.py
-/test_screenshot.png
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Models (large files)
+models/
+
+# Debug output
+debug/
+
+# Benchmark results
+benchmarks/results/
+
+# IDE / editor
+.claude/
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Test artifacts
+.pytest_cache/

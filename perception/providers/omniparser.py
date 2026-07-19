@@ -1,4 +1,5 @@
-# perception/providers/omniparser.py
+"""OmniParser v2: YOLO icon detection + Florence-2 captioning."""
+
 import os
 import torch
 from PIL import Image
@@ -28,7 +29,6 @@ class OmniParserProvider(LazyProvider):
         from ultralytics import YOLO
         from transformers import AutoModelForCausalLM, AutoProcessor
 
-        # one-time safetensors conversion
         if not os.path.exists(FLORENCE_SAFE):
             print("[omniparser] Converting Florence-2 weights (one-time ~30s)...")
             tmp = AutoModelForCausalLM.from_pretrained(

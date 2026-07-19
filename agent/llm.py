@@ -1,4 +1,5 @@
-# agent.py
+"""LLM server management and action inference via llama-cpp."""
+
 import subprocess
 import time
 import base64
@@ -19,32 +20,24 @@ def start_server():
     print("Starting Qwen3-VL server...")
     _server_process = subprocess.Popen(
         [
-            "python",
-            "-m",
-            "llama_cpp.server",
-            "--model",
-            MODEL_PATH,
-            "--clip_model_path",
-            MMPROJ_PATH,
-            "--n_gpu_layers",
-            "-1",
-            "--n_ctx",
-            "8192",
-            "--port",
-            "8080",
+            "python", "-m", "llama_cpp.server",
+            "--model", MODEL_PATH,
+            "--clip_model_path", MMPROJ_PATH,
+            "--n_gpu_layers", "-1",
+            "--n_ctx", "8192",
+            "--port", "8080",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     atexit.register(stop_server)
 
-    # wait until server is ready
     for _ in range(30):
         try:
             requests.get(f"{SERVER_URL}/health", timeout=2)
             print("Server ready.")
             return
-        except:
+        except Exception:
             time.sleep(2)
     raise RuntimeError("Server failed to start")
 
@@ -63,6 +56,19 @@ def image_to_base64(image: Image.Image) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
+SYSTEM_PROMPT = """You are a GUI agent on a Mac. Given a task, screenshot, and UI elements list, respond with the next action as JSON only, no extra text:
+{"thought": "...", "action": "click|double_click|right_click|type|hotkey|press|scroll|screenshot|finished", "element_id": null, "text": null, "keys": ["cmd", "space"], "key": null, "direction": null, "finished": false}
+
+Rules:
+- NEVER use action "press" for combinations like cmd+space, use "hotkey" instead
+- "press" is only for single keys like enter, escape, tab
+- "hotkey" is for combinations like ["cmd", "space"], ["cmd", "c"]
+- keys must always be a list e.g. ["cmd", "space"] never a string
+- element_id must be an integer or null
+- after typing in a search bar always press enter to confirm
+- only return finished when you can see the result on screen, not just because you typed something"""
+
+
 KEY_MAP = {
     "cmd": "command",
     "ctrl": "control",
@@ -74,9 +80,7 @@ KEY_MAP = {
 def parse_action(content: str) -> dict:
     try:
         content = content.strip()
-        # find first { and its matching }
         first_brace = content.index("{")
-        # find matching closing brace by counting depth
         depth = 0
         end = first_brace
         for i, ch in enumerate(content[first_brace:], start=first_brace):
@@ -90,20 +94,12 @@ def parse_action(content: str) -> dict:
         content = content[first_brace : end + 1]
         action = json.loads(content)
 
-        # normalize keys
         keys = action.get("keys")
         if isinstance(keys, str):
             action["keys"] = [k.strip() for k in keys.replace("+", " ").split()]
         if action.get("keys"):
-            KEY_MAP = {
-                "cmd": "command",
-                "ctrl": "control",
-                "alt": "option",
-                "return": "enter",
-            }
             action["keys"] = [KEY_MAP.get(k.lower(), k.lower()) for k in action["keys"]]
 
-        # normalize element_id
         eid = action.get("element_id")
         if isinstance(eid, str):
             action["element_id"] = int(eid) if eid.isdigit() else None
@@ -117,21 +113,6 @@ def parse_action(content: str) -> dict:
             "thought": "parse error retrying",
             "finished": False,
         }
-
-
-SYSTEM_PROMPT = """You are a GUI agent on a Mac. Given a task, screenshot, and UI elements list, respond with the next action as JSON only, no extra text:
-{"thought": "...", "action": "click|double_click|right_click|type|hotkey|press|scroll|screenshot|finished", "element_id": null, "text": null, "keys": ["cmd", "space"], "key": null, "direction": null, "finished": false}
-
-Rules:
-- NEVER use action "press" for combinations like cmd+space, use "hotkey" instead
-- "press" is only for single keys like enter, escape, tab
-- "hotkey" is for combinations like ["cmd", "space"], ["cmd", "c"]
-- keys must always be a list e.g. ["cmd", "space"] never a string
-- element_id must be an integer or null
-- after typing in a search bar always press enter to confirm
-- only return finished when you can see the result on screen, not just because you typed something
-
-{"thought": "...", "action": "click|type|hotkey|press|scroll|screenshot|finished", "element_id": null, "text": null, "keys": null, "key": null, "direction": null, "finished": false}"""
 
 
 def get_next_action(
@@ -183,26 +164,6 @@ What is the next action?"""
         json=payload,
         timeout=60,
     )
-    print("Status:", response.status_code)
-    print("Response:", response.text)
     response.raise_for_status()
-
     content = response.json()["choices"][0]["message"]["content"].strip()
-
-    # parse JSON from response
     return parse_action(content)
-
-
-if __name__ == "__main__":
-    start_server()
-    from perception import parse_screen, elements_to_text
-
-    result = parse_screen()
-    action = get_next_action(
-        task="Open Spotlight search",
-        screenshot=result["screenshot"],
-        elements=result["elements"],
-        history=[],
-    )
-    print("Agent action:", json.dumps(action, indent=2))
-    stop_server()

@@ -1,4 +1,3 @@
-# perception/providers/ax.py
 from PIL import Image
 from .base_provider import LazyProvider
 from ..registry import register
@@ -27,7 +26,7 @@ INTERACTIVE_ROLES = {
 class AXProvider(LazyProvider):
     name = "ax"
     description = (
-        "macOS Accessibility API — zero-latency, semantic roles, no vision model"
+        "macOS Accessibility API -- zero-latency, semantic roles, no vision model"
     )
 
     def _load(self):

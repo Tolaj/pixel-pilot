@@ -1,4 +1,3 @@
-# perception/registry.py
 from __future__ import annotations
 from typing import Type
 from .base import PerceptionProvider
@@ -7,14 +6,7 @@ _registry: dict[str, Type[PerceptionProvider]] = {}
 
 
 def register(cls: Type[PerceptionProvider]) -> Type[PerceptionProvider]:
-    """
-    Decorator — register a PerceptionProvider subclass.
-
-        @register
-        class MyProvider(PerceptionProvider):
-            name = "my_provider"
-            ...
-    """
+    """Decorator -- register a PerceptionProvider subclass."""
     if not cls.name or cls.name == "base":
         raise ValueError(f"Provider {cls} must define a unique `name` attribute.")
     _registry[cls.name] = cls

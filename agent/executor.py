@@ -1,11 +1,8 @@
-# executor.py
-import time
-import pyautogui
-import subprocess
+"""Action execution via pyautogui."""
 
-# safety — prevents pyautogui from going too fast
+import pyautogui
+
 pyautogui.PAUSE = 0.5
-# move mouse to corner to abort
 pyautogui.FAILSAFE = True
 
 
@@ -54,22 +51,9 @@ def press(key: str) -> str:
 
 
 def execute_action(action: dict, elements: list) -> str:
-    """
-    Execute an action from the agent's JSON output.
-
-    action format:
-    {
-        "action": "click" | "double_click" | "right_click" | "type" | "hotkey" | "scroll" | "press" | "screenshot" | "finished",
-        "element_id": 3,       # for click/double_click/right_click/scroll
-        "text": "hello",       # for type
-        "keys": ["cmd", "space"], # for hotkey
-        "key": "enter",        # for press
-        "direction": "down",   # for scroll
-    }
-    """
+    """Execute an action from the agent's JSON output."""
     action_type = action.get("action")
 
-    # resolve element center if element_id is given
     def get_center():
         eid = action.get("element_id")
         if eid is None:
@@ -82,51 +66,32 @@ def execute_action(action: dict, elements: list) -> str:
     if action_type == "click":
         cx, cy = get_center()
         return click(cx, cy)
-
     elif action_type == "double_click":
         cx, cy = get_center()
         return double_click(cx, cy)
-
     elif action_type == "right_click":
         cx, cy = get_center()
         return right_click(cx, cy)
-
     elif action_type == "type":
         text = action.get("text", "")
         return type_text(text)
-
     elif action_type == "hotkey":
         keys = action.get("keys", [])
         return hotkey(*keys)
-
     elif action_type == "press":
-        # if keys list given, treat as hotkey instead
         keys = action.get("keys")
         if keys and len(keys) > 1:
             return hotkey(*keys)
         key = action.get("key") or (keys[0] if keys else "enter")
         return press(key)
-
     elif action_type == "scroll":
         cx, cy = get_center()
         direction = action.get("direction", "down")
-        clicks = action.get("clicks", 3)
-        return scroll(cx, cy, direction, clicks)
-
+        clicks_count = action.get("clicks", 3)
+        return scroll(cx, cy, direction, clicks_count)
     elif action_type == "screenshot":
         return "screenshot taken"
-
     elif action_type == "finished":
         return "finished"
-
     else:
         raise ValueError(f"Unknown action type: {action_type}")
-
-
-# quick test
-if __name__ == "__main__":
-    import time
-
-    time.sleep(2)
-    result = hotkey("command", "space")
-    print(result)

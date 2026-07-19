@@ -1,12 +1,8 @@
-# perception/providers/base_provider.py
 from ..base import PerceptionProvider
 
 
 class LazyProvider(PerceptionProvider):
-    """
-    Mixin that adds lazy model loading to any provider.
-    Subclasses implement _load() instead of worrying about init guards.
-    """
+    """Mixin that adds lazy model loading to any provider."""
 
     _loaded: bool = False
 
