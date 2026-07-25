@@ -53,9 +53,33 @@ def _parse_location(text: str):
     return None, None
 
 
+def _get_screen_scale():
+    """Get the Retina scale factor (screencapture pixels / display points)."""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["system_profiler", "SPDisplaysDataType"],
+            capture_output=True, text=True, timeout=5,
+        )
+        # Look for resolution line like "Resolution: 2880 x 1864 Retina"
+        for line in result.stdout.splitlines():
+            if "Resolution" in line and "Retina" in line:
+                return 2.0
+    except Exception:
+        pass
+    return 1.0
+
+
+_screen_scale = None
+
+
 def _run_inference(image: Image.Image, instruction: str) -> dict:
+    global _screen_scale
     _ensure_model()
     orig_w, orig_h = image.size
+
+    if _screen_scale is None:
+        _screen_scale = _get_screen_scale()
 
     prompt = (
         f"I want to {instruction}. Please locate the target element "
@@ -82,11 +106,15 @@ def _run_inference(image: Image.Image, instruction: str) -> dict:
     pixel_x = loc_x / 999.0 * orig_w
     pixel_y = loc_y / 999.0 * orig_h
 
+    point_x = pixel_x / _screen_scale
+    point_y = pixel_y / _screen_scale
+
     return {
         "success": True,
-        "x": round(pixel_x, 1),
-        "y": round(pixel_y, 1),
+        "x": round(point_x, 1),
+        "y": round(point_y, 1),
         "image_size": {"width": orig_w, "height": orig_h},
+        "scale_factor": _screen_scale,
         "inference_time": round(elapsed, 2),
     }
 

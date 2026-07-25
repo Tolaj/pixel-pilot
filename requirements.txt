@@ -6,8 +6,10 @@ timm
 pillow
 fastmcp
 smolagents[mcp,openai]
+qwen-agent[mcp]
+json5
 mlx-lm
-llama-cpp-python
+llama-cpp-python[server]
 huggingface-hub
 numpy
 pyobjc-framework-ApplicationServices

@@ -1,5 +1,5 @@
 """
-GUI Agent — connects to LLM server + GoClick MCP server.
+GUI Agent — custom loop with GoClick MCP server.
 
 Standalone:
     python -m agent.run "open Safari"
@@ -14,9 +14,7 @@ import sys
 
 import config
 
-from smolagents import CodeAgent, ToolCallingAgent, OpenAIServerModel, MCPClient
-from mcp import StdioServerParameters
-
+from agent.loop import run as loop_run
 from agent.tools import (
     take_screenshot,
     click_at,
@@ -27,82 +25,66 @@ from agent.tools import (
 )
 
 
-SYSTEM_PROMPT = """\
-You are a GUI automation agent running on macOS. You control the computer by:
+def _make_tools(spawn_mcp):
+    """Build a tools dict for the custom loop."""
+    tools = {
+        "take_screenshot": lambda **kw: take_screenshot(),
+        "click_at": lambda **kw: click_at(x=int(kw["x"]), y=int(kw["y"])),
+        "double_click_at": lambda **kw: double_click_at(x=int(kw["x"]), y=int(kw["y"])),
+        "type_text": lambda **kw: type_text(text=kw["text"]),
+        "press_key": lambda **kw: press_key(key=kw["key"]),
+        "wait_seconds": lambda **kw: wait_seconds(seconds=float(kw["seconds"])),
+    }
 
-1. Taking screenshots to see the current screen state
-2. Using goclick_point to find where to click for a given instruction
-3. Clicking, typing, and pressing keys to interact
+    if spawn_mcp:
+        from mcp_server.server import _ensure_model, goclick_point, goclick_health
 
-Workflow for each step:
-1. screenshot_path = take_screenshot()
-2. result = goclick_point(image_path=screenshot_path, instruction="click on X")
-3. Parse the JSON result to get x, y coordinates
-4. click_at(x=int(x), y=int(y))
-5. wait_seconds(seconds=1.0)
-6. Take another screenshot to verify
+        def _goclick_point(**kw):
+            _ensure_model()
+            return goclick_point(image_path=kw["image_path"], instruction=kw["instruction"])
 
-If an action doesn't work (screen didn't change), try a different instruction
-for goclick_point or try a different approach.
+        def _goclick_health(**kw):
+            _ensure_model()
+            return goclick_health()
 
-Important:
-- Always take a screenshot FIRST before deciding what to do
-- goclick_point returns a JSON string — parse it with json.loads()
-- Keep actions simple: one click or one type per step
-- After typing a URL, press_key("return") to navigate
-"""
+        tools["goclick_point"] = _goclick_point
+        tools["goclick_health"] = _goclick_health
+    else:
+        from smolagents import MCPClient
+        mcp_client = MCPClient([{"url": config.MCP_URL}])
+        mcp_tools_list = mcp_client.__enter__()
+        mcp_map = {t.name: t for t in mcp_tools_list}
+        print(f"MCP tools: {list(mcp_map.keys())}")
+
+        def _goclick_point(**kw):
+            return mcp_map["goclick_point"](image_path=kw["image_path"], instruction=kw["instruction"])
+
+        def _goclick_health(**kw):
+            return mcp_map["goclick_health"]()
+
+        tools["goclick_point"] = _goclick_point
+        tools["goclick_health"] = _goclick_health
+        tools["_mcp_client"] = mcp_client
+
+    return tools
 
 
 def run(task, port=None, max_steps=None, spawn_mcp=True):
-    """
-    Run the agent.
-
-    Args:
-        task: What to do.
-        port: LLM server port.
-        max_steps: Max agent steps.
-        spawn_mcp: If True, spawns GoClick as subprocess (option 1).
-                   If False, connects to already-running MCP server (option 2).
-    """
     port = port or config.LLM_PORT
     max_steps = max_steps or config.MAX_STEPS
 
     print(f"Task: {task}")
+    tools = _make_tools(spawn_mcp)
 
-    native_tools = [
-        take_screenshot, click_at, double_click_at,
-        type_text, press_key, wait_seconds,
-    ]
+    loop_tools = {k: v for k, v in tools.items() if not k.startswith("_")}
 
-    if spawn_mcp:
-        mcp_config = [StdioServerParameters(
-            command=sys.executable,
-            args=["-m", "mcp_server.server"],
-        )]
-    else:
-        from smolagents import MCPClient as _  # noqa
-        mcp_config = [{"url": config.MCP_URL}]
+    result = loop_run(task, loop_tools, max_steps=max_steps, port=port)
 
-    with MCPClient(mcp_config) as mcp_tools:
-        print(f"MCP tools: {[t.name for t in mcp_tools]}")
+    mcp_client = tools.get("_mcp_client")
+    if mcp_client:
+        mcp_client.__exit__(None, None, None)
 
-        model_id = (config.LLM_MODEL_MLX if config.LLM_BACKEND == "mlx"
-                    else config.LLM_MODEL_GGUF)
-        model = OpenAIServerModel(
-            model_id=model_id,
-            api_base=f"http://127.0.0.1:{port}/v1",
-            api_key="not-needed",
-        )
-
-        agent = ToolCallingAgent(
-            tools=native_tools + mcp_tools,
-            model=model,
-            max_steps=max_steps,
-        )
-
-        result = agent.run(f"{SYSTEM_PROMPT}\n\nTask: {task}")
-        print(f"\nResult: {result}")
-        return result
+    return result
 
 
 if __name__ == "__main__":

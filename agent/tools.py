@@ -22,7 +22,14 @@ def take_screenshot() -> str:
         Path to the saved screenshot PNG file.
     """
     path = os.path.join(tempfile.gettempdir(), f"pixel_pilot_screen_{int(time.time())}.png")
-    subprocess.run(["screencapture", "-x", path], check=True)
+    result = subprocess.run(["screencapture", "-x", path], capture_output=True, text=True)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "could not create image" in stderr:
+            return "ERROR: Screen recording permission denied. Grant it in System Settings > Privacy & Security > Screen Recording for your terminal app, then restart the terminal."
+        return f"ERROR: screencapture failed: {stderr}"
+    if not os.path.exists(path):
+        return "ERROR: Screenshot file was not created."
     return path
 
 
